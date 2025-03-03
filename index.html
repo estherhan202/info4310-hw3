@@ -1,129 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Yelp Boston Map</title>
-    <link rel="stylesheet" type="text/css" href="../css/normalize.css" />
-    <link rel="stylesheet" type="text/css" href="../css/skeleton.css" />
-    <link rel="stylesheet" type="text/css" href="../css/custom-style.css" />
-    <link
-      rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css"
-    />
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://d3js.org/topojson.v3.min.js"></script>
-    <style>
-      .gridlines line {
-        stroke: #bbb;
-      }
-      .gridlines .domain {
-        stroke: none;
-      }
-      .state {
-        fill: lightgrey;
-      }
-      .outline {
-        stroke: black;
-        stroke-width: 1px;
-        fill: none;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container larger">
-      <h3>Yelp Boston Restaurant Explorer</h3>
-      <svg id="map" width="800" height="600"></svg>
-      <div id="sidebar">
-        <h4>Restaurant Details</h4>
-        <p>Select a restaurant from the map.</p>
-      </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yelp Boston Map</title>
+  <link rel="stylesheet" type="text/css" href="../css/normalize.css" />
+  <link rel="stylesheet" type="text/css" href="../css/skeleton.css" />
+  <link rel="stylesheet" type="text/css" href="../css/custom-style.css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://d3js.org/topojson.v3.min.js"></script>
+  <style>
+    .gridlines line {
+      stroke: #bbb;
+    }
+
+    .gridlines .domain {
+      stroke: none;
+    }
+
+    .state {
+      fill: lightgrey;
+    }
+
+    .outline {
+      stroke: black;
+      stroke-width: 1px;
+      fill: none;
+    }
+
+    .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    #map {
+      width: 60%;
+      height: 600px;
+      border: 1px solid #ddd;
+    }
+
+    #sidebar {
+      width: 35%;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      margin-left: 20px;
+    }
+
+    h3,
+    h4 {
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="map"></div>
+    <div id="sidebar">
+      <h4>Restaurant Details</h4>
+      <p>Select a restaurant from the map.</p>
     </div>
-    <script>
-      document.addEventListener("DOMContentLoaded", async function () {
-        const width = 800;
-        const height = 600;
-        let selectedRestaurant = null;
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", async function () {
+      const width = 800;
+      const height = 600;
+      let selectedRestaurant = null;
 
-        const svg = d3
-          .select("#map")
-          .append("svg")
-          .attr("width", width)
-          .attr("height", height);
+      const svg = d3
+        .select("#map")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
 
-        const projection = d3
-          .geoMercator()
-          .center([-71.0589, 42.3601])
-          .scale(100000)
-          .translate([width / 2, height / 2]);
+      const projection = d3
+        .geoMercator()
+        .center([-71.0589, 42.3601])
+        .scale(100000)
+        .translate([width / 2, height / 2]);
 
-        const path = d3.geoPath().projection(projection);
+      const path = d3.geoPath().projection(projection);
 
-        const geoData = await d3.json(
-          "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
-        );
+      const geoData = await d3.json(
+        "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
+      );
+
+      svg
+        .append("g")
+        .selectAll("path")
+        .data(geoData.features)
+        .enter()
+        .append("path")
+        .attr("d", path)
+        .attr("fill", "#ddd")
+        .attr("stroke", "#999");
+
+      const yelpData = await d3.csv("yelp_boston.csv");
+
+      yelpData.forEach((d) => {
+        d.review_count = +d.review_count;
+        d.categories_json = JSON.parse(d.categories_json);
+        d.rating = +d.rating;
+        d.latitude = +d.latitude;
+        d.longitude = +d.longitude;
+      });
+
+      function updateMap(filteredData) {
+        svg.selectAll("circle").remove();
 
         svg
-          .append("g")
-          .selectAll("path")
-          .data(geoData.features)
+          .selectAll("circle")
+          .data(filteredData)
           .enter()
-          .append("path")
-          .attr("d", path)
-          .attr("fill", "#ddd")
-          .attr("stroke", "#999");
+          .append("circle")
+          .attr("cx", (d) => projection([d.longitude, d.latitude])[0])
+          .attr("cy", (d) => projection([d.longitude, d.latitude])[1])
+          .attr("r", 5)
+          .attr("fill", "red")
+          .on("click", function (event, d) {
+            selectedRestaurant = d;
+            updateSidebar();
+          });
+      }
 
-        const yelpData = await d3.csv("yelp_boston.csv");
+      function updateSidebar() {
+        const sidebar = d3.select("#sidebar");
+        sidebar.selectAll("p, h4, a").remove();
 
-        yelpData.forEach((d) => {
-          d.review_count = +d.review_count;
-          d.categories_json = JSON.parse(d.categories_json);
-          d.rating = +d.rating;
-          d.latitude = +d.latitude;
-          d.longitude = +d.longitude;
-        });
-
-        function updateMap(filteredData) {
-          svg.selectAll("circle").remove();
-
-          svg
-            .selectAll("circle")
-            .data(filteredData)
-            .enter()
-            .append("circle")
-            .attr("cx", (d) => projection([d.longitude, d.latitude])[0])
-            .attr("cy", (d) => projection([d.longitude, d.latitude])[1])
-            .attr("r", 5)
-            .attr("fill", "red")
-            .on("click", function (event, d) {
-              selectedRestaurant = d;
-              updateSidebar();
-            });
+        if (selectedRestaurant) {
+          sidebar.append("h4").text(selectedRestaurant.name);
+          sidebar.append("p").text(selectedRestaurant.snippet_text);
+          sidebar
+            .append("p")
+            .html(`<strong>Rating:</strong> ${selectedRestaurant.rating} ⭐`);
+          sidebar.append("p").text(selectedRestaurant.neighborhood);
+          sidebar
+            .append("a")
+            .attr("href", selectedRestaurant.url)
+            .attr("target", "_blank")
+            .text("View on Yelp");
+        } else {
+          sidebar.append("p").text("Select a restaurant from the map.");
         }
+      }
 
-        function updateSidebar() {
-          const sidebar = d3.select("#sidebar");
-          sidebar.selectAll("p, h4, a").remove();
+      updateMap(yelpData);
+    });
+  </script>
+</body>
 
-          if (selectedRestaurant) {
-            sidebar.append("h4").text(selectedRestaurant.name);
-            sidebar.append("p").text(selectedRestaurant.snippet_text);
-            sidebar
-              .append("p")
-              .html(`<strong>Rating:</strong> ${selectedRestaurant.rating} ⭐`);
-            sidebar.append("p").text(selectedRestaurant.neighborhood);
-            sidebar
-              .append("a")
-              .attr("href", selectedRestaurant.url)
-              .attr("target", "_blank")
-              .text("View on Yelp");
-          } else {
-            sidebar.append("p").text("Select a restaurant from the map.");
-          }
-        }
-
-        updateMap(yelpData);
-      });
-    </script>
-  </body>
 </html>
