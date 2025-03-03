@@ -4,49 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yelp Boston Map</title>
+    <link rel="stylesheet" type="text/css" href="../css/normalize.css" />
+    <link rel="stylesheet" type="text/css" href="../css/skeleton.css" />
+    <link rel="stylesheet" type="text/css" href="../css/custom-style.css" />
+    <link
+      rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css"
+    />
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        background: #f5f5f5;
-        margin: 20px;
+      .gridlines line {
+        stroke: #bbb;
       }
-      .container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 30px;
+      .gridlines .domain {
+        stroke: none;
       }
-      .chart-container {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px black solid;
+      .state {
+        fill: lightgrey;
       }
-      h1 {
-        margin-bottom: 60px;
-      }
-      .tooltip {
-        position: absolute;
-        background: white;
-        padding: 5px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 12px;
-        visibility: hidden;
+      .outline {
+        stroke: black;
+        stroke-width: 1px;
+        fill: none;
       }
     </style>
   </head>
   <body>
-    <h1>Yelp Boston Restaurant Explorer</h1>
-    <div class="container">
-      <div class="chart-container">
-        <h2>Restaurant Map</h2>
-        <svg id="map" width="800" height="600"></svg>
-      </div>
-      <div class="chart-container" id="sidebar">
-        <h2>Restaurant Details</h2>
+    <div class="container larger">
+      <h3>Yelp Boston Restaurant Explorer</h3>
+      <svg id="map" width="800" height="600"></svg>
+      <div id="sidebar">
+        <h4>Restaurant Details</h4>
         <p>Select a restaurant from the map.</p>
       </div>
     </div>
@@ -68,18 +57,30 @@
           .scale(100000)
           .translate([width / 2, height / 2]);
 
-        const yelpData = await d3.csv("yelp_boston.csv", (d) => {
-          return {
-            name: d.name,
-            url: d.url,
-            review_count: +d.review_count,
-            categories_json: JSON.parse(d.categories_json),
-            rating: +d.rating,
-            snippet_text: d.snippet_text,
-            neighborhood: d.neighborhood,
-            latitude: +d.latitude,
-            longitude: +d.longitude,
-          };
+        const path = d3.geoPath().projection(projection);
+
+        const geoData = await d3.json(
+          "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
+        );
+
+        svg
+          .append("g")
+          .selectAll("path")
+          .data(geoData.features)
+          .enter()
+          .append("path")
+          .attr("d", path)
+          .attr("fill", "#ddd")
+          .attr("stroke", "#999");
+
+        const yelpData = await d3.csv("yelp_boston.csv");
+
+        yelpData.forEach((d) => {
+          d.review_count = +d.review_count;
+          d.categories_json = JSON.parse(d.categories_json);
+          d.rating = +d.rating;
+          d.latitude = +d.latitude;
+          d.longitude = +d.longitude;
         });
 
         function updateMap(filteredData) {
@@ -101,15 +102,23 @@
         }
 
         function updateSidebar() {
-          const sidebar = document.getElementById("sidebar");
+          const sidebar = d3.select("#sidebar");
+          sidebar.selectAll("p, h4, a").remove();
+
           if (selectedRestaurant) {
-            sidebar.innerHTML = `
-              <h2>${selectedRestaurant.name}</h2>
-              <p>${selectedRestaurant.snippet_text}</p>
-              <p><strong>Rating:</strong> ${selectedRestaurant.rating} ⭐</p>
-              <p>${selectedRestaurant.neighborhood}</p>
-              <a href="${selectedRestaurant.url}" target="_blank">View on Yelp</a>
-            `;
+            sidebar.append("h4").text(selectedRestaurant.name);
+            sidebar.append("p").text(selectedRestaurant.snippet_text);
+            sidebar
+              .append("p")
+              .html(`<strong>Rating:</strong> ${selectedRestaurant.rating} ⭐`);
+            sidebar.append("p").text(selectedRestaurant.neighborhood);
+            sidebar
+              .append("a")
+              .attr("href", selectedRestaurant.url)
+              .attr("target", "_blank")
+              .text("View on Yelp");
+          } else {
+            sidebar.append("p").text("Select a restaurant from the map.");
           }
         }
 
