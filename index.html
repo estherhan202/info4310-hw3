@@ -109,25 +109,23 @@
     </div>
   </div>
 
-
   <script>
-    document.addEventListener("DOMContentLoaded", async function () {
-
+    const yelpMapBoston = async function () {
       const svgMap = d3.select("svg#map");
       const mapWidth = svgMap.attr("width");
-      const map_height = svgMap.attr("height");
+      const mapHeight = svgMap.attr("height");
       let selectedRestaurant = null;
 
       svgMap
         .append("svg")
         .attr("width", mapWidth)
-        .attr("height", map_height);
+        .attr("height", mapHeight);
 
       const projection = d3
         .geoMercator()
         .center([-71.0589, 42.3601])
         .scale(100000)
-        .translate([mapWidth / 2, map_height / 2]);
+        .translate([mapWidth / 2, mapHeight / 2]);
 
       const path = d3.geoPath().projection(projection);
 
@@ -147,7 +145,7 @@
 
       const yelpData = await d3.csv("yelp_boston.csv");
 
-      console.log(yelpData)
+      console.log(yelpData);
 
       yelpData.forEach((d) => {
         d.review_count = +d.review_count;
@@ -170,7 +168,6 @@
           .attr("r", 5)
           .attr("fill", "#FF1A1A")
           .on("click", function (event, d) {
-            // console.log("Circle clicked", d); // Log data of the clicked circle
             selectedRestaurant = d;
             updateSidebar();
           });
@@ -178,7 +175,7 @@
 
       function updateSidebar() {
         if (selectedRestaurant) {
-          d3.select("#default-message").style("display", "none"); // Hide default message
+          d3.select("#default-message").style("display", "none");
 
           d3.select("#restaurant-name")
             .style("display", "block")
@@ -198,18 +195,23 @@
 
           d3.select("#restaurant-link")
             .attr("href", selectedRestaurant.url)
-            .style("display", "block"); // Show the Yelp link
+            .style("display", "block");
         } else {
-          d3.select("#default-message").style("display", "block"); // Show default message
+          d3.select("#default-message").style("display", "block");
 
           d3.selectAll("#restaurant-name, #restaurant-description, #restaurant-neighborhood, #restaurant-rating, #restaurant-link")
-            .style("display", "none"); // Hide all other elements
+            .style("display", "none");
         }
       }
 
+      // Initially populate the map
       updateMap(yelpData);
-    });
+    };
+
+    // Call the function!
+    yelpMapBoston();
   </script>
+
 </body>
 
 </html>
