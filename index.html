@@ -89,22 +89,109 @@
     #inside-sidebar {
       padding: 20px;
     }
+
+    .filtering-container {
+      position: relative;
+      margin: 20px auto;
+      width: 94%;
+      padding: 10px;
+      background-color: #ff1a1a;
+      border-radius: 5px;
+      display: flex;
+      justify-content: center;
+    }
+
+
+    .filtering-label {
+      font-size: 16px;
+      color: #fff;
+      /* White text for contrast */
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .filtering-input {
+      position: relative;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .filtering-input:focus {
+      border-color: #ff6000;
+      box-shadow: 0 2px 5px rgba(255, 96, 0, 0.3);
+      outline: none;
+    }
+
+    /* The dropdown list */
+    .filtering-list {
+      position: absolute;
+      top: 40px;
+      left: 124px;
+      width: 91.8%;
+      z-index: 999;
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      list-style-type: none;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    .filtering-list li {
+      padding: 8px 12px;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .filtering-list li:hover {
+      background-color: #f7f7f7;
+    }
+
+    .filtering-list li.selected {
+      background-color: #ff6000;
+      color: white;
+    }
+
+    div.column {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
   </style>
 </head>
 
 <body>
   <h1>yelp boston restaurant map</h1>
 
-  <div class="container">
-    <svg id="map" height="800" width="1100"></svg>
-    <div id="sidebar">
-      <div id="inside-sidebar">
-        <p id="default-message">Select a restaurant from the map.</p>
-        <h4 id="restaurant-name" style="display: none;"></h4>
-        <p id="restaurant-description" style="display: none;"><strong>Description:</strong> <span></span></p>
-        <p id="restaurant-neighborhood" style="display: none;"><strong>Neighborhood:</strong> <span></span></p>
-        <p id="restaurant-rating" style="display: none;"><strong>Rating:</strong> <span></span></p>
-        <a id="restaurant-link" href="#" target="_blank" style="display: none;">View on Yelp</a>
+  <div class="column">
+    <div class="filtering-container">
+      <label for="category-filtering" class="filtering-label">Filter by Category</label>
+      <input type="text" id="category-filtering" class="filtering-input" placeholder="Search for categories...">
+      <ul id="filtering-list" class="filtering-list"></ul>
+    </div>
+
+    <div class="container">
+      <svg id="map" height="800" width="1100"></svg>
+      <div id="sidebar">
+        <div id="inside-sidebar">
+          <p id="default-message">Select a restaurant from the map.</p>
+          <h4 id="restaurant-name" style="display: none;"></h4>
+          <p id="restaurant-rating" style="display: none;"><strong>Rating:</strong> <span></span></p>
+
+          <p id="restaurant-description" style="display: none;"><strong>Description:</strong> <span></span></p>
+          <p id="restaurant-neighborhood" style="display: none;"><strong>Neighborhood:</strong> <span></span></p>
+          <a id="restaurant-link" href="#" target="_blank" style="display: none;">View on Yelp</a>
+        </div>
       </div>
     </div>
   </div>
@@ -144,7 +231,6 @@
         .attr("stroke", "#999");
 
       const yelpData = await d3.csv("yelp_boston.csv");
-
       console.log(yelpData);
 
       yelpData.forEach((d) => {
@@ -153,6 +239,76 @@
         d.rating = +d.rating;
         d.latitude = +d.latitude;
         d.longitude = +d.longitude;
+      });
+
+      const categories = [
+        ...new Set(
+          yelpData.flatMap((restaurant) => {
+            if (Array.isArray(restaurant.categories_json)) {
+              return restaurant.categories_json.map((category) => category[0]);
+            } else {
+              return [];
+            }
+          })
+        ),
+      ];
+
+      // Step 2: filtering functionality (using D3)
+      const input = d3.select("#category-filtering");
+      const list = d3.select("#filtering-list");
+
+      // Attach the 'input' event listener using D3
+      input.on("input", function () {
+        const query = input.property("value").toLowerCase();
+        console.log("User input:", query);
+
+        // Clear previous suggestions
+        list.html("");
+
+        if (query) {
+          // Filter categories based on the input
+          const filteredCategories = categories.filter((category) =>
+            category.toLowerCase().includes(query)
+          );
+
+          // Show the matching categories in the list
+          const items = list
+            .selectAll("li")
+            .data(filteredCategories)
+            .join("li")
+            .text((d) => d)
+            .on("click", function (event, category) {
+              input.property("value", category); // Set input value to selected category
+              list.html(""); // Clear the dropdown
+              console.log("Category selected:", category);
+
+              // Filter data by selected category and update map
+              const filteredData = yelpData.filter((d) =>
+                d.categories_json.some((cat) =>
+                  cat[0].toLowerCase().includes(category.toLowerCase())
+                )
+              );
+              updateMap(filteredData); // Call the map update function with filtered data
+            });
+
+          // Show the dropdown if there are suggestions
+          list.style("display", filteredCategories.length > 0 ? "block" : "none");
+
+          console.log(
+            filteredCategories.length > 0 ? "Dropdown displayed with suggestions." : "No matching categories. Dropdown hidden."
+          );
+        } else {
+          list.style("display", "none"); // Hide the dropdown if input is empty
+          console.log("Input is empty. Dropdown hidden.");
+        }
+      });
+
+      // Close the list if the user clicks outside (using D3)
+      d3.select(document).on("click", function (event) {
+        if (!input.node().contains(event.target) && !list.node().contains(event.target)) {
+          list.style("display", "none");
+          console.log("Clicked outside, hiding dropdown.");
+        }
       });
 
       function updateMap(filteredData) {
@@ -183,15 +339,18 @@
 
           d3.select("#restaurant-description")
             .style("display", "block")
-            .select("span").text(selectedRestaurant.snippet_text);
+            .select("span")
+            .text(selectedRestaurant.snippet_text);
 
           d3.select("#restaurant-neighborhood")
             .style("display", "block")
-            .select("span").text(selectedRestaurant.neighborhood);
+            .select("span")
+            .text(selectedRestaurant.neighborhood);
 
           d3.select("#restaurant-rating")
             .style("display", "block")
-            .select("span").text(`${selectedRestaurant.rating} ⭐`);
+            .select("span")
+            .html(generateStars(selectedRestaurant.rating));
 
           d3.select("#restaurant-link")
             .attr("href", selectedRestaurant.url)
@@ -204,11 +363,16 @@
         }
       }
 
-      // Initially populate the map
       updateMap(yelpData);
-    };
 
-    // Call the function!
+      function generateStars(rating) {
+        // Simply return the image for the corresponding rating
+        return `<img src="review_stars/${rating}.png" alt="Rating: ${rating} stars" width="100" height="20">`;
+      }
+
+
+    }
+
     yelpMapBoston();
   </script>
 
