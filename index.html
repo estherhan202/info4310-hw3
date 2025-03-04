@@ -98,7 +98,7 @@
       background-color: #ff1a1a;
       border-radius: 5px;
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
     }
 
 
@@ -112,7 +112,7 @@
 
     .filtering-input {
       position: relative;
-      width: 100%;
+      width: 400px;
       padding: 12px;
       font-size: 16px;
       border: 1px solid #ddd;
@@ -175,9 +175,15 @@
 
   <div class="column">
     <div class="filtering-container">
-      <label for="category-filtering" class="filtering-label">Filter by Category</label>
-      <input type="text" id="category-filtering" class="filtering-input" placeholder="Search for categories...">
+      <input type="text" id="category-filtering" class="filtering-input" placeholder="Enter a category...">
       <ul id="filtering-list" class="filtering-list"></ul>
+
+      <input type="text" id="rating-filtering" class="filtering-input" placeholder="Enter a rating...">
+      <ul id="rating-list" class="filtering-list"></ul>
+
+      <input type="text" id="neighborhood-filtering" class="filtering-input" placeholder="Enter a neighborhood...">
+      <ul id="neighborhood-list" class="filtering-list"></ul>
+
     </div>
 
     <div class="container">
@@ -239,6 +245,7 @@
         d.rating = +d.rating;
         d.latitude = +d.latitude;
         d.longitude = +d.longitude;
+        d.neighborhood = d.neighborhood || '';
       });
 
       const categories = [
@@ -253,63 +260,136 @@
         ),
       ];
 
-      // Step 2: filtering functionality (using D3)
-      const input = d3.select("#category-filtering");
-      const list = d3.select("#filtering-list");
+      // Category filtering
+      const categoryInput = d3.select("#category-filtering");
+      const categoryList = d3.select("#filtering-list");
 
-      // Attach the 'input' event listener using D3
-      input.on("input", function () {
-        const query = input.property("value").toLowerCase();
-        console.log("User input:", query);
+      categoryInput.on("input", function () {
+        const query = categoryInput.property("value").toLowerCase();
+        console.log("Category user input:", query);
 
-        // Clear previous suggestions
-        list.html("");
+        categoryList.html("");
 
         if (query) {
-          // Filter categories based on the input
           const filteredCategories = categories.filter((category) =>
             category.toLowerCase().includes(query)
           );
 
-          // Show the matching categories in the list
-          const items = list
+          const items = categoryList
             .selectAll("li")
             .data(filteredCategories)
             .join("li")
             .text((d) => d)
             .on("click", function (event, category) {
-              input.property("value", category); // Set input value to selected category
-              list.html(""); // Clear the dropdown
+              categoryInput.property("value", category);
+              categoryList.html("");
               console.log("Category selected:", category);
 
-              // Filter data by selected category and update map
+              // Filter data by category
               const filteredData = yelpData.filter((d) =>
                 d.categories_json.some((cat) =>
                   cat[0].toLowerCase().includes(category.toLowerCase())
                 )
               );
-              updateMap(filteredData); // Call the map update function with filtered data
+              updateMap(filteredData);
             });
 
-          // Show the dropdown if there are suggestions
-          list.style("display", filteredCategories.length > 0 ? "block" : "none");
-
-          console.log(
-            filteredCategories.length > 0 ? "Dropdown displayed with suggestions." : "No matching categories. Dropdown hidden."
-          );
+          categoryList.style("display", filteredCategories.length > 0 ? "block" : "none");
         } else {
-          list.style("display", "none"); // Hide the dropdown if input is empty
-          console.log("Input is empty. Dropdown hidden.");
+          categoryList.style("display", "none");
         }
       });
 
-      // Close the list if the user clicks outside (using D3)
-      d3.select(document).on("click", function (event) {
-        if (!input.node().contains(event.target) && !list.node().contains(event.target)) {
-          list.style("display", "none");
-          console.log("Clicked outside, hiding dropdown.");
+
+      // Rating filtering
+      const ratingInput = d3.select("#rating-filtering");
+      const ratingList = d3.select("#filtering-list");
+
+      // Array of unique ratings
+      const ratings = [...new Set(yelpData.map((d) => d.rating))];
+
+      ratingInput.on("input", function () {
+        const query = ratingInput.property("value").toLowerCase();
+        console.log("Rating user input:", query);
+
+        ratingList.html("");
+
+        if (query) {
+          // Filter the ratings based on query
+          const filteredRatings = ratings.filter((rating) =>
+            rating.toString().includes(query) // Check if the rating contains the query
+          );
+
+          // Create the list items for the dropdown
+          const items = ratingList
+            .selectAll("li")
+            .data(filteredRatings)
+            .join("li")
+            .text((d) => `Rating: ${d}`)
+            .on("click", function (event, rating) {
+              ratingInput.property("value", rating);
+              ratingList.html(""); // Clear the dropdown
+
+              const filteredData = yelpData.filter((d) => d.rating === rating);
+              updateMap(filteredData);
+            });
+
+          ratingList.style("display", filteredRatings.length > 0 ? "block" : "none");
+        } else {
+          ratingList.style("display", "none");
         }
       });
+
+
+      // Neighborhood filtering
+      // Neighborhood filtering
+      const neighborhoodInput = d3.select("#neighborhood-filtering");
+      const neighborhoodList = d3.select("#filtering-list");
+
+      // Array of unique neighborhoods
+      const neighborhoods = [...new Set(yelpData.map((d) => d.neighborhood))];
+
+      neighborhoodInput.on("input", function () {
+        const query = neighborhoodInput.property("value").toLowerCase();
+        console.log("Neighborhood user input:", query);
+
+        neighborhoodList.html("");
+
+        if (query) {
+          // Filter neighborhoods based on query
+          const filteredNeighborhoods = neighborhoods.filter((neighborhood) =>
+            neighborhood.toLowerCase().includes(query) // Check if the neighborhood includes the query
+          );
+
+          // Create the list items for the dropdown
+          const items = neighborhoodList
+            .selectAll("li")
+            .data(filteredNeighborhoods)
+            .join("li")
+            .text((d) => d)
+            .on("click", function (event, neighborhood) {
+              neighborhoodInput.property("value", neighborhood);
+              neighborhoodList.html(""); // Clear the dropdown
+
+              const filteredData = yelpData.filter((d) => d.neighborhood.toLowerCase() === neighborhood.toLowerCase());
+              updateMap(filteredData);
+            });
+
+          neighborhoodList.style("display", filteredNeighborhoods.length > 0 ? "block" : "none");
+        } else {
+          neighborhoodList.style("display", "none");
+        }
+      });
+      // Click outside the filtering box to close the dropdown
+      d3.select("body").on("click", function (event) {
+        const target = event.target;
+        if (!d3.select("#category-filtering").node().contains(target) && !d3.select("#rating-filtering").node().contains(target) && !d3.select("#neighborhood-filtering").node().contains(target)) {
+          categoryList.style("display", "none");
+          ratingList.style("display", "none");
+          neighborhoodList.style("display", "none");
+        }
+      });
+
 
       function updateMap(filteredData) {
         svgMap.selectAll("circle").remove();
@@ -366,14 +446,12 @@
       updateMap(yelpData);
 
       function generateStars(rating) {
-        // Simply return the image for the corresponding rating
         return `<img src="review_stars/${rating}.png" alt="Rating: ${rating} stars" width="100" height="20">`;
       }
-
-
-    }
+    };
 
     yelpMapBoston();
+
   </script>
 
 </body>
