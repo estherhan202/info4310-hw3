@@ -5,13 +5,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yelp Boston Map</title>
-  <link rel="stylesheet" type="text/css" href="../css/normalize.css" />
-  <link rel="stylesheet" type="text/css" href="../css/skeleton.css" />
-  <link rel="stylesheet" type="text/css" href="../css/custom-style.css" />
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://d3js.org/topojson.v3.min.js"></script>
+
+  <!-- Link for Poppins font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
+
   <style>
+    body {
+      font-family: 'Proxima Nova', sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      height: 80vh;
+    }
+
     .gridlines line {
       stroke: #bbb;
     }
@@ -32,57 +40,84 @@
 
     .container {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 20px;
+      justify-content: space-evenly;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    h1 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: bold;
+      color: #000000;
+      text-align: center;
+      font-size: 3em;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      text-shadow:
+        4px 4px 0px white,
+        -4px -4px 0px white,
+        4px -4px 0px white,
+        -4px 4px 0px white,
+        4px 4px 4px black;
+    }
+
+
+    h4 {
+      font-family: 'Proxima Nova', sans-serif;
+      font-weight: bold;
+      color: #000000;
+      font-size: 1.5em;
     }
 
     #map {
-      width: 60%;
-      height: 600px;
+      border-radius: 8px;
       border: 1px solid #ddd;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      object-fit: cover;
     }
 
     #sidebar {
-      width: 35%;
-      padding: 20px;
-      background-color: #f9f9f9;
+      background-color: #fff;
+      border-radius: 8px;
       border: 1px solid #ddd;
       margin-left: 20px;
-    }
-
-    h3,
-    h4 {
-      font-family: Arial, sans-serif;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
   </style>
 </head>
 
 <body>
+  <h1>yelp boston restaurant map</h1>
+
   <div class="container">
-    <div id="map"></div>
-    <div id="sidebar">
-      <h4>Restaurant Details</h4>
-      <p>Select a restaurant from the map.</p>
-    </div>
+    <svg id="map" height="800" width="1100"></svg>
+    <svg id="sidebar" height="800" width="500">
+      <text x="20" y="40" font-family="Poppins" font-size="24" font-weight="bold" fill="#000000">Restaurant
+        Details</text>
+      <text x="20" y="80" font-family="Poppins" font-size="16" fill="#666666">Select a restaurant from the map.</text>
+    </svg>
   </div>
+
+
   <script>
     document.addEventListener("DOMContentLoaded", async function () {
-      const width = 800;
-      const height = 600;
+
+      const svgMap = d3.select("svg#map");
+      const mapWidth = svgMap.attr("width");
+      const map_height = svgMap.attr("height");
       let selectedRestaurant = null;
 
-      const svg = d3
-        .select("#map")
+      console.log("width", mapWidth)
+      svgMap
         .append("svg")
-        .attr("width", width)
-        .attr("height", height);
+        .attr("width", mapWidth)
+        .attr("height", map_height);
 
       const projection = d3
         .geoMercator()
         .center([-71.0589, 42.3601])
         .scale(100000)
-        .translate([width / 2, height / 2]);
+        .translate([mapWidth / 2, map_height / 2]);
 
       const path = d3.geoPath().projection(projection);
 
@@ -90,7 +125,7 @@
         "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
       );
 
-      svg
+      svgMap
         .append("g")
         .selectAll("path")
         .data(geoData.features)
@@ -111,9 +146,9 @@
       });
 
       function updateMap(filteredData) {
-        svg.selectAll("circle").remove();
+        svgMap.selectAll("circle").remove();
 
-        svg
+        svgMap
           .selectAll("circle")
           .data(filteredData)
           .enter()
@@ -121,15 +156,22 @@
           .attr("cx", (d) => projection([d.longitude, d.latitude])[0])
           .attr("cy", (d) => projection([d.longitude, d.latitude])[1])
           .attr("r", 5)
-          .attr("fill", "red")
+          .attr("fill", "#FF1A1A")
           .on("click", function (event, d) {
             selectedRestaurant = d;
             updateSidebar();
           });
       }
+      const sidebar = d3.select("#sidebar");
+      const sidebarWidth = sidebar.attr("width");
+      const sidebarHeight = sidebar.attr("height")
 
       function updateSidebar() {
-        const sidebar = d3.select("#sidebar");
+        sidebar
+          // .append("svg")
+          .attr("width", sidebarWidth)
+          .attr("height", sidebarHeight);
+
         sidebar.selectAll("p, h4, a").remove();
 
         if (selectedRestaurant) {
