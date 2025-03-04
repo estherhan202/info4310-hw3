@@ -41,7 +41,7 @@
     .container {
       display: flex;
       justify-content: space-evenly;
-      align-items: stretch;
+      /* align-items: stretch; */
       height: 100%;
     }
 
@@ -82,6 +82,12 @@
       border: 1px solid #ddd;
       margin-left: 20px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      height: 800px;
+      width: 500px;
+    }
+
+    #inside-sidebar {
+      padding: 20px;
     }
   </style>
 </head>
@@ -91,9 +97,15 @@
 
   <div class="container">
     <svg id="map" height="800" width="1100"></svg>
-    <div id="sidebar" height="800" width="500">
-      <h4>Restaurant Details</h4>
-      <p>Select a restaurant from the map.</p>
+    <div id="sidebar">
+      <div id="inside-sidebar">
+        <p id="default-message">Select a restaurant from the map.</p>
+        <h4 id="restaurant-name" style="display: none;"></h4>
+        <p id="restaurant-description" style="display: none;"><strong>Description:</strong> <span></span></p>
+        <p id="restaurant-neighborhood" style="display: none;"><strong>Neighborhood:</strong> <span></span></p>
+        <p id="restaurant-rating" style="display: none;"><strong>Rating:</strong> <span></span></p>
+        <a id="restaurant-link" href="#" target="_blank" style="display: none;">View on Yelp</a>
+      </div>
     </div>
   </div>
 
@@ -106,7 +118,6 @@
       const map_height = svgMap.attr("height");
       let selectedRestaurant = null;
 
-      console.log("width", mapWidth)
       svgMap
         .append("svg")
         .attr("width", mapWidth)
@@ -136,6 +147,8 @@
 
       const yelpData = await d3.csv("yelp_boston.csv");
 
+      console.log(yelpData)
+
       yelpData.forEach((d) => {
         d.review_count = +d.review_count;
         d.categories_json = JSON.parse(d.categories_json);
@@ -164,27 +177,33 @@
       }
 
       function updateSidebar() {
-        const sidebar = d3.select("#sidebar");
-        const sidebarWidth = sidebar.attr("width");
-        const sidebarHeight = sidebar.attr("height")
-        sidebar.selectAll("p, h4, a").remove();
-
-        console.log("Selected Restaurant:", selectedRestaurant);
-
         if (selectedRestaurant) {
-          sidebar.append("h4").text(selectedRestaurant.name);
-          sidebar.append("p").text(selectedRestaurant.snippet_text);
-          sidebar
-            .append("p")
-            .html(`<strong>Rating:</strong> ${selectedRestaurant.rating} ⭐`);
-          sidebar.append("p").text(selectedRestaurant.neighborhood);
-          sidebar
-            .append("a")
+          d3.select("#default-message").style("display", "none"); // Hide default message
+
+          d3.select("#restaurant-name")
+            .style("display", "block")
+            .text(selectedRestaurant.name);
+
+          d3.select("#restaurant-description")
+            .style("display", "block")
+            .select("span").text(selectedRestaurant.snippet_text);
+
+          d3.select("#restaurant-neighborhood")
+            .style("display", "block")
+            .select("span").text(selectedRestaurant.neighborhood);
+
+          d3.select("#restaurant-rating")
+            .style("display", "block")
+            .select("span").text(`${selectedRestaurant.rating} ⭐`);
+
+          d3.select("#restaurant-link")
             .attr("href", selectedRestaurant.url)
-            .attr("target", "_blank")
-            .text("View on Yelp");
+            .style("display", "block"); // Show the Yelp link
         } else {
-          sidebar.append("p").text("Select a restaurant from the map.");
+          d3.select("#default-message").style("display", "block"); // Show default message
+
+          d3.selectAll("#restaurant-name, #restaurant-description, #restaurant-neighborhood, #restaurant-rating, #restaurant-link")
+            .style("display", "none"); // Hide all other elements
         }
       }
 
