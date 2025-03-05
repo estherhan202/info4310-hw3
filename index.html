@@ -167,6 +167,15 @@
       flex-direction: column;
       justify-content: center;
     }
+
+    .clear-btn {
+      top: 10px;
+      position: absolute;
+      cursor: pointer;
+      font-weight: bold;
+      color: green;
+      font-size: 18px;
+    }
   </style>
 </head>
 
@@ -175,13 +184,22 @@
 
   <div class="column">
     <div class="filtering-container">
-      <input type="text" id="category-filtering" class="filtering-input" placeholder="Enter a category...">
+      <div class="filtering-input-container">
+        <input type="text" id="category-filtering" class="filtering-input" placeholder="Enter a category...">
+        <span class="clear-btn" id="category-clear-btn">✖</span>
+      </div>
       <ul id="filtering-list" class="filtering-list"></ul>
 
-      <input type="text" id="rating-filtering" class="filtering-input" placeholder="Enter a rating...">
+      <div class="filtering-input-container">
+        <input type="text" id="rating-filtering" class="filtering-input" placeholder="Enter a rating...">
+        <span class="clear-btn" id="rating-clear-btn">✖</span>
+      </div>
       <ul id="rating-list" class="filtering-list"></ul>
 
-      <input type="text" id="neighborhood-filtering" class="filtering-input" placeholder="Enter a neighborhood...">
+      <div class="filtering-input-container">
+        <input type="text" id="neighborhood-filtering" class="filtering-input" placeholder="Enter a neighborhood...">
+        <span class="clear-btn" id="neighborhood-clear-btn">✖</span>
+      </div>
       <ul id="neighborhood-list" class="filtering-list"></ul>
 
     </div>
@@ -248,6 +266,22 @@
         d.neighborhood = d.neighborhood || '';
       });
 
+
+      const filters = {
+        category: null,
+        rating: null,
+        neighborhood: null
+      };
+
+      function applyFilters() {
+        let filteredData = yelpData.filter(d => {
+          return (!filters.category || d.categories_json.some(cat => cat[0].toLowerCase().includes(filters.category.toLowerCase()))) &&
+            (!filters.rating || d.rating === +filters.rating) &&
+            (!filters.neighborhood || d.neighborhood.toLowerCase() === filters.neighborhood.toLowerCase());
+        });
+
+        updateMap(filteredData);
+      }
       const categories = [
         ...new Set(
           yelpData.flatMap((restaurant) => {
@@ -264,122 +298,86 @@
       const categoryInput = d3.select("#category-filtering");
       const categoryList = d3.select("#filtering-list");
 
-      categoryInput.on("input", function () {
+      categoryInput.on("focus input", function () {
         const query = categoryInput.property("value").toLowerCase();
-        console.log("Category user input:", query);
-
         categoryList.html("");
 
-        if (query) {
-          const filteredCategories = categories.filter((category) =>
-            category.toLowerCase().includes(query)
-          );
+        const filteredCategories = query ? categories.filter(category => category.toLowerCase().includes(query)) : categories;
 
-          const items = categoryList
-            .selectAll("li")
-            .data(filteredCategories)
-            .join("li")
-            .text((d) => d)
-            .on("click", function (event, category) {
-              categoryInput.property("value", category);
-              categoryList.html("");
-              console.log("Category selected:", category);
+        categoryList
+          .selectAll("li")
+          .data(filteredCategories)
+          .join("li")
+          .text(d => d)
+          .on("click", function (event, category) {
+            categoryInput.property("value", category);
+            categoryList.html("").style("display", "none");
 
-              // Filter data by category
-              const filteredData = yelpData.filter((d) =>
-                d.categories_json.some((cat) =>
-                  cat[0].toLowerCase().includes(category.toLowerCase())
-                )
-              );
-              updateMap(filteredData);
-            });
+            filters.category = category;
+            applyFilters();
+          });
 
-          categoryList.style("display", filteredCategories.length > 0 ? "block" : "none");
-        } else {
-          categoryList.style("display", "none");
-        }
+        categoryList.style("display", filteredCategories.length > 0 ? "block" : "none");
       });
-
 
       // Rating filtering
       const ratingInput = d3.select("#rating-filtering");
-      const ratingList = d3.select("#filtering-list");
+      const ratingList = d3.select("#rating-list");
 
       // Array of unique ratings
       const ratings = [...new Set(yelpData.map((d) => d.rating))];
 
-      ratingInput.on("input", function () {
+      ratingInput.on("focus input", function () {
         const query = ratingInput.property("value").toLowerCase();
-        console.log("Rating user input:", query);
-
         ratingList.html("");
 
-        if (query) {
-          // Filter the ratings based on query
-          const filteredRatings = ratings.filter((rating) =>
-            rating.toString().includes(query) // Check if the rating contains the query
-          );
+        const filteredRatings = query ? ratings.filter(rating => rating.toString().includes(query)) : ratings;
 
-          // Create the list items for the dropdown
-          const items = ratingList
-            .selectAll("li")
-            .data(filteredRatings)
-            .join("li")
-            .text((d) => `Rating: ${d}`)
-            .on("click", function (event, rating) {
-              ratingInput.property("value", rating);
-              ratingList.html(""); // Clear the dropdown
+        ratingList
+          .selectAll("li")
+          .data(filteredRatings)
+          .join("li")
+          .text(d => d)
+          .on("click", function (event, rating) {
+            ratingInput.property("value", rating);
+            ratingList.html("").style("display", "none");
 
-              const filteredData = yelpData.filter((d) => d.rating === rating);
-              updateMap(filteredData);
-            });
+            filters.rating = rating;
+            applyFilters();
+          });
 
-          ratingList.style("display", filteredRatings.length > 0 ? "block" : "none");
-        } else {
-          ratingList.style("display", "none");
-        }
+        ratingList.style("display", filteredRatings.length > 0 ? "block" : "none");
       });
 
-
-      // Neighborhood filtering
       // Neighborhood filtering
       const neighborhoodInput = d3.select("#neighborhood-filtering");
-      const neighborhoodList = d3.select("#filtering-list");
+      const neighborhoodList = d3.select("#neighborhood-list");
 
-      // Array of unique neighborhoods
       const neighborhoods = [...new Set(yelpData.map((d) => d.neighborhood))];
 
-      neighborhoodInput.on("input", function () {
-        const query = neighborhoodInput.property("value").toLowerCase();
-        console.log("Neighborhood user input:", query);
 
+      neighborhoodInput.on("focus input", function () {
+        const query = neighborhoodInput.property("value").toLowerCase();
         neighborhoodList.html("");
 
-        if (query) {
-          // Filter neighborhoods based on query
-          const filteredNeighborhoods = neighborhoods.filter((neighborhood) =>
-            neighborhood.toLowerCase().includes(query) // Check if the neighborhood includes the query
-          );
+        const filteredNeighborhoods = query ? neighborhoods.filter(neighborhood => neighborhood.toLowerCase().includes(query)) : neighborhoods;
 
-          // Create the list items for the dropdown
-          const items = neighborhoodList
-            .selectAll("li")
-            .data(filteredNeighborhoods)
-            .join("li")
-            .text((d) => d)
-            .on("click", function (event, neighborhood) {
-              neighborhoodInput.property("value", neighborhood);
-              neighborhoodList.html(""); // Clear the dropdown
+        neighborhoodList
+          .selectAll("li")
+          .data(filteredNeighborhoods)
+          .join("li")
+          .text(d => d)
+          .on("click", function (event, neighborhood) {
+            neighborhoodInput.property("value", neighborhood);
+            neighborhoodList.html("").style("display", "none");
 
-              const filteredData = yelpData.filter((d) => d.neighborhood.toLowerCase() === neighborhood.toLowerCase());
-              updateMap(filteredData);
-            });
+            filters.neighborhood = neighborhood;
+            applyFilters();
+          });
 
-          neighborhoodList.style("display", filteredNeighborhoods.length > 0 ? "block" : "none");
-        } else {
-          neighborhoodList.style("display", "none");
-        }
+        neighborhoodList.style("display", filteredNeighborhoods.length > 0 ? "block" : "none");
       });
+
       // Click outside the filtering box to close the dropdown
       d3.select("body").on("click", function (event) {
         const target = event.target;
@@ -389,7 +387,24 @@
           neighborhoodList.style("display", "none");
         }
       });
+      // Create clear buttons
+      d3.select("#category-clear-btn").on("click", function () {
+        d3.select("#category-filtering").property("value", "");
+        filters.category = null;
+        applyFilters();
+      });
 
+      d3.select("#rating-clear-btn").on("click", function () {
+        d3.select("#rating-filtering").property("value", "");
+        filters.rating = null;
+        applyFilters();
+      });
+
+      d3.select("#neighborhood-clear-btn").on("click", function () {
+        d3.select("#neighborhood-filtering").property("value", "");
+        filters.neighborhood = null;
+        applyFilters();
+      });
 
       function updateMap(filteredData) {
         svgMap.selectAll("circle").remove();
@@ -448,6 +463,7 @@
       function generateStars(rating) {
         return `<img src="review_stars/${rating}.png" alt="Rating: ${rating} stars" width="100" height="20">`;
       }
+
     };
 
     yelpMapBoston();
