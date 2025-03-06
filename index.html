@@ -7,6 +7,9 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
 
+    <!-- Google Maps JavaScript API Uncomment to use Street View -->
+    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsLKcHMuOZ620g6AlLPLhu_DgcgXsQXQg"></script> -->
+
     <!-- Link for Poppins font -->
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap"
@@ -85,6 +88,14 @@
 
       #inside-sidebar {
         padding: 20px;
+      }
+
+      #street-view {
+        width: 100%;
+        height: 300px;
+        margin-top: 20px;
+        border-radius: 8px;
+        overflow: hidden;
       }
 
       .filtering-container {
@@ -241,6 +252,7 @@
             <p id="restaurant-neighborhood" style="display: none">
               <strong>Neighborhood:</strong> <span></span>
             </p>
+            <div id="street-view" style="display: none"></div>
             <a
               id="restaurant-link"
               href="#"
@@ -508,11 +520,26 @@
             d3.select("#restaurant-link")
               .attr("href", selectedRestaurant.url)
               .style("display", "block");
+
+            d3.select("#street-view").style("display", "block");
+            const streetViewLocation = {
+              lat: selectedRestaurant.latitude,
+              lng: selectedRestaurant.longitude,
+            };
+
+            const streetView = new google.maps.StreetViewPanorama(
+              d3.select("#street-view").node(),
+              {
+                position: streetViewLocation,
+                pov: { heading: 0, pitch: 0 },
+                zoom: 1,
+              }
+            );
           } else {
             d3.select("#default-message").style("display", "block");
 
             d3.selectAll(
-              "#restaurant-name, #restaurant-description, #restaurant-neighborhood, #restaurant-rating, #restaurant-link"
+              "#restaurant-name, #restaurant-description, #restaurant-neighborhood, #restaurant-rating, #restaurant-link, #street-view"
             ).style("display", "none");
           }
         }
