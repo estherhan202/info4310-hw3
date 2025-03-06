@@ -1,486 +1,530 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yelp Boston Map</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Yelp Boston Map</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <!-- Link for Poppins font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap"
+      rel="stylesheet"
+    />
 
-  <!-- Link for Poppins font -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: "Proxima Nova", sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 0;
+        height: 80vh;
+      }
 
-  <style>
-    body {
-      font-family: 'Proxima Nova', sans-serif;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 0;
-      height: 80vh;
-    }
+      .gridlines line {
+        stroke: #bbb;
+      }
 
-    .gridlines line {
-      stroke: #bbb;
-    }
+      .gridlines .domain {
+        stroke: none;
+      }
 
-    .gridlines .domain {
-      stroke: none;
-    }
+      .state {
+        fill: lightgrey;
+      }
 
-    .state {
-      fill: lightgrey;
-    }
+      .outline {
+        stroke: black;
+        stroke-width: 1px;
+        fill: none;
+      }
 
-    .outline {
-      stroke: black;
-      stroke-width: 1px;
-      fill: none;
-    }
+      .container {
+        display: flex;
+        justify-content: space-evenly;
+        /* align-items: stretch; */
+        height: 100%;
+      }
 
-    .container {
-      display: flex;
-      justify-content: space-evenly;
-      /* align-items: stretch; */
-      height: 100%;
-    }
+      h1 {
+        font-family: "Poppins", sans-serif;
+        font-weight: bold;
+        color: #000000;
+        text-align: center;
+        font-size: 3em;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        text-shadow: 4px 4px 0px white, -4px -4px 0px white, 4px -4px 0px white,
+          -4px 4px 0px white, 4px 4px 4px black;
+      }
 
-    h1 {
-      font-family: 'Poppins', sans-serif;
-      font-weight: bold;
-      color: #000000;
-      text-align: center;
-      font-size: 3em;
-      margin-top: 20px;
-      margin-bottom: 20px;
-      text-shadow:
-        4px 4px 0px white,
-        -4px -4px 0px white,
-        4px -4px 0px white,
-        -4px 4px 0px white,
-        4px 4px 4px black;
-    }
+      h4 {
+        font-family: "Proxima Nova", sans-serif;
+        font-weight: bold;
+        color: #000000;
+        font-size: 1.5em;
+      }
 
+      #map {
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        object-fit: cover;
+      }
 
-    h4 {
-      font-family: 'Proxima Nova', sans-serif;
-      font-weight: bold;
-      color: #000000;
-      font-size: 1.5em;
-    }
+      #sidebar {
+        background-color: #fff;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        margin-left: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        height: 800px;
+        width: 500px;
+      }
 
-    #map {
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      object-fit: cover;
-    }
+      #inside-sidebar {
+        padding: 20px;
+      }
 
-    #sidebar {
-      background-color: #fff;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      margin-left: 20px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      height: 800px;
-      width: 500px;
-    }
+      .filtering-container {
+        position: relative;
+        margin: 20px auto;
+        width: 94%;
+        padding: 10px;
+        background-color: #ff1a1a;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+      }
 
-    #inside-sidebar {
-      padding: 20px;
-    }
+      .filtering-label {
+        font-size: 16px;
+        color: #fff;
+        /* White text for contrast */
+        margin-bottom: 5px;
+        display: block;
+      }
 
-    .filtering-container {
-      position: relative;
-      margin: 20px auto;
-      width: 94%;
-      padding: 10px;
-      background-color: #ff1a1a;
-      border-radius: 5px;
-      display: flex;
-      justify-content: space-between;
-    }
+      .filtering-input {
+        position: relative;
+        width: 400px;
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
 
+      .filtering-input:focus {
+        border-color: #ff6000;
+        box-shadow: 0 2px 5px rgba(255, 96, 0, 0.3);
+        outline: none;
+      }
 
-    .filtering-label {
-      font-size: 16px;
-      color: #fff;
-      /* White text for contrast */
-      margin-bottom: 5px;
-      display: block;
-    }
+      /* The dropdown list */
+      .filtering-list {
+        position: absolute;
+        top: 40px;
 
-    .filtering-input {
-      position: relative;
-      width: 400px;
-      padding: 12px;
-      font-size: 16px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      transition: all 0.2s ease;
-    }
+        width: 25.5%;
+        z-index: 999;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        list-style-type: none;
+        padding: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        display: none;
+      }
 
-    .filtering-input:focus {
-      border-color: #ff6000;
-      box-shadow: 0 2px 5px rgba(255, 96, 0, 0.3);
-      outline: none;
-    }
+      #filtering-list {
+        left: 10px;
+      }
 
-    /* The dropdown list */
-    .filtering-list {
-      position: absolute;
-      top: 40px;
+      #rating-list {
+        left: 608px;
+      }
 
-      width: 25.5%;
-      z-index: 999;
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      list-style-type: none;
-      padding: 0;
-      max-height: 200px;
-      overflow-y: auto;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      display: none;
-    }
+      #neighborhood-list {
+        left: 1205px;
+      }
 
-    #filtering-list {
-      left: 10px;
-    }
+      .filtering-list li {
+        padding: 8px 12px;
+        font-size: 14px;
+        color: #333;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
 
-    #rating-list {
-      left: 608px;
-    }
+      .filtering-list li:hover {
+        background-color: #f7f7f7;
+      }
 
-    #neighborhood-list {
-      left: 1205px;
-    }
+      .filtering-list li.selected {
+        background-color: #ff6000;
+        color: white;
+      }
 
-    .filtering-list li {
-      padding: 8px 12px;
-      font-size: 14px;
-      color: #333;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
+      div.column {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
 
-    .filtering-list li:hover {
-      background-color: #f7f7f7;
-    }
+      .clear-btn {
+        top: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        color: white;
+        font-size: 18px;
+      }
+    </style>
+  </head>
 
-    .filtering-list li.selected {
-      background-color: #ff6000;
-      color: white;
-    }
+  <body>
+    <h1>yelp boston restaurant map</h1>
 
-    div.column {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
+    <div class="column">
+      <div class="filtering-container">
+        <div class="filtering-input-container">
+          <input
+            type="text"
+            id="category-filtering"
+            class="filtering-input"
+            placeholder="Enter a category..."
+          />
+          <span class="clear-btn" id="category-clear-btn">✖</span>
+        </div>
+        <ul id="filtering-list" class="filtering-list"></ul>
 
-    .clear-btn {
-      top: 10px;
-      cursor: pointer;
-      font-weight: bold;
-      color: white;
-      font-size: 18px;
-    }
-  </style>
-</head>
+        <div class="filtering-input-container">
+          <input
+            type="text"
+            id="rating-filtering"
+            class="filtering-input"
+            placeholder="Enter a rating..."
+          />
+          <span class="clear-btn" id="rating-clear-btn">✖</span>
+        </div>
+        <ul id="rating-list" class="filtering-list"></ul>
 
-<body>
-  <h1>yelp boston restaurant map</h1>
-
-  <div class="column">
-    <div class="filtering-container">
-      <div class="filtering-input-container">
-        <input type="text" id="category-filtering" class="filtering-input" placeholder="Enter a category...">
-        <span class="clear-btn" id="category-clear-btn">✖</span>
+        <div class="filtering-input-container">
+          <input
+            type="text"
+            id="neighborhood-filtering"
+            class="filtering-input"
+            placeholder="Enter a neighborhood..."
+          />
+          <span class="clear-btn" id="neighborhood-clear-btn">✖</span>
+        </div>
+        <ul id="neighborhood-list" class="filtering-list"></ul>
       </div>
-      <ul id="filtering-list" class="filtering-list"></ul>
 
-      <div class="filtering-input-container">
-        <input type="text" id="rating-filtering" class="filtering-input" placeholder="Enter a rating...">
-        <span class="clear-btn" id="rating-clear-btn">✖</span>
-      </div>
-      <ul id="rating-list" class="filtering-list"></ul>
+      <div class="container">
+        <svg id="map" height="800" width="1100"></svg>
+        <div id="sidebar">
+          <div id="inside-sidebar">
+            <p id="default-message">Select a restaurant from the map.</p>
+            <h4 id="restaurant-name" style="display: none"></h4>
+            <p id="restaurant-rating" style="display: none">
+              <strong>Rating:</strong> <span></span>
+            </p>
 
-      <div class="filtering-input-container">
-        <input type="text" id="neighborhood-filtering" class="filtering-input" placeholder="Enter a neighborhood...">
-        <span class="clear-btn" id="neighborhood-clear-btn">✖</span>
-      </div>
-      <ul id="neighborhood-list" class="filtering-list"></ul>
-
-    </div>
-
-    <div class="container">
-      <svg id="map" height="800" width="1100"></svg>
-      <div id="sidebar">
-        <div id="inside-sidebar">
-          <p id="default-message">Select a restaurant from the map.</p>
-          <h4 id="restaurant-name" style="display: none;"></h4>
-          <p id="restaurant-rating" style="display: none;"><strong>Rating:</strong> <span></span></p>
-
-          <p id="restaurant-description" style="display: none;"><strong>Description:</strong> <span></span></p>
-          <p id="restaurant-neighborhood" style="display: none;"><strong>Neighborhood:</strong> <span></span></p>
-          <a id="restaurant-link" href="#" target="_blank" style="display: none;">View on Yelp</a>
+            <p id="restaurant-description" style="display: none">
+              <strong>Description:</strong> <span></span>
+            </p>
+            <p id="restaurant-neighborhood" style="display: none">
+              <strong>Neighborhood:</strong> <span></span>
+            </p>
+            <a
+              id="restaurant-link"
+              href="#"
+              target="_blank"
+              style="display: none"
+              >View on Yelp</a
+            >
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    const yelpMapBoston = async function () {
-      const svgMap = d3.select("svg#map");
-      const mapWidth = svgMap.attr("width");
-      const mapHeight = svgMap.attr("height");
-      let selectedRestaurant = null;
+    <script>
+      const yelpMapBoston = async function () {
+        const svgMap = d3.select("svg#map");
+        const mapWidth = svgMap.attr("width");
+        const mapHeight = svgMap.attr("height");
+        let selectedRestaurant = null;
 
-      svgMap
-        .append("svg")
-        .attr("width", mapWidth)
-        .attr("height", mapHeight);
+        svgMap.append("svg").attr("width", mapWidth).attr("height", mapHeight);
 
-      const projection = d3
-        .geoMercator()
-        .center([-71.0589, 42.3601])
-        .scale(100000)
-        .translate([mapWidth / 2, mapHeight / 2]);
+        const projection = d3
+          .geoMercator()
+          .center([-71.0589, 42.3601])
+          .scale(100000)
+          .translate([mapWidth / 2, mapHeight / 2]);
 
-      const path = d3.geoPath().projection(projection);
+        const path = d3.geoPath().projection(projection);
 
-      const geoData = await d3.json(
-        "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
-      );
-
-      svgMap
-        .append("g")
-        .selectAll("path")
-        .data(geoData.features)
-        .enter()
-        .append("path")
-        .attr("d", path)
-        .attr("fill", "#ddd")
-        .attr("stroke", "#999");
-
-      const yelpData = await d3.csv("yelp_boston.csv");
-      console.log(yelpData);
-
-      yelpData.forEach((d) => {
-        d.review_count = +d.review_count;
-        d.categories_json = JSON.parse(d.categories_json);
-        d.rating = +d.rating;
-        d.latitude = +d.latitude;
-        d.longitude = +d.longitude;
-        d.neighborhood = d.neighborhood || '';
-      });
-
-
-      const filters = {
-        category: null,
-        rating: null,
-        neighborhood: null
-      };
-
-      function applyFilters() {
-        let filteredData = yelpData.filter(d => {
-          return (!filters.category || d.categories_json.some(cat => cat[0].toLowerCase().includes(filters.category.toLowerCase()))) &&
-            (!filters.rating || d.rating === +filters.rating) &&
-            (!filters.neighborhood || d.neighborhood.toLowerCase() === filters.neighborhood.toLowerCase());
-        });
-
-        updateMap(filteredData);
-      }
-      const categories = [
-        ...new Set(
-          yelpData.flatMap((restaurant) => {
-            if (Array.isArray(restaurant.categories_json)) {
-              return restaurant.categories_json.map((category) => category[0]);
-            } else {
-              return [];
-            }
-          })
-        ),
-      ];
-
-      // Category filtering
-      const categoryInput = d3.select("#category-filtering");
-      const categoryList = d3.select("#filtering-list");
-
-      categoryInput.on("focus input", function () {
-        const query = categoryInput.property("value").toLowerCase();
-        categoryList.html("");
-
-        const filteredCategories = query ? categories.filter(category => category.toLowerCase().includes(query)) : categories;
-
-        categoryList
-          .selectAll("li")
-          .data(filteredCategories)
-          .join("li")
-          .text(d => d)
-          .on("click", function (event, category) {
-            categoryInput.property("value", category);
-            categoryList.html("").style("display", "none");
-
-            filters.category = category;
-            applyFilters();
-          });
-
-        categoryList.style("display", filteredCategories.length > 0 ? "block" : "none");
-      });
-
-      // Rating filtering
-      const ratingInput = d3.select("#rating-filtering");
-      const ratingList = d3.select("#rating-list");
-
-      // Array of unique ratings
-      const ratings = [...new Set(yelpData.map((d) => d.rating))];
-
-      ratingInput.on("focus input", function () {
-        const query = ratingInput.property("value").toLowerCase();
-        ratingList.html("");
-
-        const filteredRatings = query ? ratings.filter(rating => rating.toString().includes(query)) : ratings;
-
-        ratingList
-          .selectAll("li")
-          .data(filteredRatings)
-          .join("li")
-          .text(d => d)
-          .on("click", function (event, rating) {
-            ratingInput.property("value", rating);
-            ratingList.html("").style("display", "none");
-
-            filters.rating = rating;
-            applyFilters();
-          });
-
-        ratingList.style("display", filteredRatings.length > 0 ? "block" : "none");
-      });
-
-      // Neighborhood filtering
-      const neighborhoodInput = d3.select("#neighborhood-filtering");
-      const neighborhoodList = d3.select("#neighborhood-list");
-
-      const neighborhoods = [...new Set(yelpData.map((d) => d.neighborhood))];
-
-
-      neighborhoodInput.on("focus input", function () {
-        const query = neighborhoodInput.property("value").toLowerCase();
-        neighborhoodList.html("");
-
-        const filteredNeighborhoods = query ? neighborhoods.filter(neighborhood => neighborhood.toLowerCase().includes(query)) : neighborhoods;
-
-        neighborhoodList
-          .selectAll("li")
-          .data(filteredNeighborhoods)
-          .join("li")
-          .text(d => d)
-          .on("click", function (event, neighborhood) {
-            neighborhoodInput.property("value", neighborhood);
-            neighborhoodList.html("").style("display", "none");
-
-            filters.neighborhood = neighborhood;
-            applyFilters();
-          });
-
-        neighborhoodList.style("display", filteredNeighborhoods.length > 0 ? "block" : "none");
-      });
-
-      // Click outside the filtering box to close the dropdown
-      d3.select("body").on("click", function (event) {
-        const target = event.target;
-        if (!d3.select("#category-filtering").node().contains(target) && !d3.select("#rating-filtering").node().contains(target) && !d3.select("#neighborhood-filtering").node().contains(target)) {
-          categoryList.style("display", "none");
-          ratingList.style("display", "none");
-          neighborhoodList.style("display", "none");
-        }
-      });
-      // Create clear buttons
-      d3.select("#category-clear-btn").on("click", function () {
-        d3.select("#category-filtering").property("value", "");
-        filters.category = null;
-        applyFilters();
-      });
-
-      d3.select("#rating-clear-btn").on("click", function () {
-        d3.select("#rating-filtering").property("value", "");
-        filters.rating = null;
-        applyFilters();
-      });
-
-      d3.select("#neighborhood-clear-btn").on("click", function () {
-        d3.select("#neighborhood-filtering").property("value", "");
-        filters.neighborhood = null;
-        applyFilters();
-      });
-
-      function updateMap(filteredData) {
-        svgMap.selectAll("circle").remove();
+        const bostonGeoJSON = await d3.json("boston.geojson");
 
         svgMap
-          .selectAll("circle")
-          .data(filteredData)
+          .append("g")
+          .selectAll("path")
+          .data(bostonGeoJSON.features)
           .enter()
-          .append("circle")
-          .attr("cx", (d) => projection([d.longitude, d.latitude])[0])
-          .attr("cy", (d) => projection([d.longitude, d.latitude])[1])
-          .attr("r", 5)
-          .attr("fill", "#FF1A1A")
-          .on("click", function (event, d) {
-            selectedRestaurant = d;
-            updateSidebar();
+          .append("path")
+          .attr("d", path)
+          .attr("fill", "#d0d0d0")
+          .attr("stroke", "#333");
+
+        const yelpData = await d3.csv("yelp_boston.csv");
+        console.log(yelpData);
+
+        yelpData.forEach((d) => {
+          d.review_count = +d.review_count;
+          d.categories_json = JSON.parse(d.categories_json);
+          d.rating = +d.rating;
+          d.latitude = +d.latitude;
+          d.longitude = +d.longitude;
+          d.neighborhood = d.neighborhood || "";
+        });
+
+        const filters = {
+          category: null,
+          rating: null,
+          neighborhood: null,
+        };
+
+        function applyFilters() {
+          let filteredData = yelpData.filter((d) => {
+            return (
+              (!filters.category ||
+                d.categories_json.some((cat) =>
+                  cat[0].toLowerCase().includes(filters.category.toLowerCase())
+                )) &&
+              (!filters.rating || d.rating === +filters.rating) &&
+              (!filters.neighborhood ||
+                d.neighborhood.toLowerCase() ===
+                  filters.neighborhood.toLowerCase())
+            );
           });
-      }
 
-      function updateSidebar() {
-        if (selectedRestaurant) {
-          d3.select("#default-message").style("display", "none");
-
-          d3.select("#restaurant-name")
-            .style("display", "block")
-            .text(selectedRestaurant.name);
-
-          d3.select("#restaurant-description")
-            .style("display", "block")
-            .select("span")
-            .text(selectedRestaurant.snippet_text);
-
-          d3.select("#restaurant-neighborhood")
-            .style("display", "block")
-            .select("span")
-            .text(selectedRestaurant.neighborhood);
-
-          d3.select("#restaurant-rating")
-            .style("display", "block")
-            .select("span")
-            .html(generateStars(selectedRestaurant.rating));
-
-          d3.select("#restaurant-link")
-            .attr("href", selectedRestaurant.url)
-            .style("display", "block");
-        } else {
-          d3.select("#default-message").style("display", "block");
-
-          d3.selectAll("#restaurant-name, #restaurant-description, #restaurant-neighborhood, #restaurant-rating, #restaurant-link")
-            .style("display", "none");
+          updateMap(filteredData);
         }
-      }
+        const categories = [
+          ...new Set(
+            yelpData.flatMap((restaurant) => {
+              if (Array.isArray(restaurant.categories_json)) {
+                return restaurant.categories_json.map(
+                  (category) => category[0]
+                );
+              } else {
+                return [];
+              }
+            })
+          ),
+        ];
 
-      updateMap(yelpData);
+        // Category filtering
+        const categoryInput = d3.select("#category-filtering");
+        const categoryList = d3.select("#filtering-list");
 
-      function generateStars(rating) {
-        return `<img src="review_stars/${rating}.png" alt="Rating: ${rating} stars" width="100" height="20">`;
-      }
+        categoryInput.on("focus input", function () {
+          const query = categoryInput.property("value").toLowerCase();
+          categoryList.html("");
 
-    };
+          const filteredCategories = query
+            ? categories.filter((category) =>
+                category.toLowerCase().includes(query)
+              )
+            : categories;
 
-    yelpMapBoston();
+          categoryList
+            .selectAll("li")
+            .data(filteredCategories)
+            .join("li")
+            .text((d) => d)
+            .on("click", function (event, category) {
+              categoryInput.property("value", category);
+              categoryList.html("").style("display", "none");
 
-  </script>
+              filters.category = category;
+              applyFilters();
+            });
 
-</body>
+          categoryList.style(
+            "display",
+            filteredCategories.length > 0 ? "block" : "none"
+          );
+        });
 
+        // Rating filtering
+        const ratingInput = d3.select("#rating-filtering");
+        const ratingList = d3.select("#rating-list");
+
+        // Array of unique ratings
+        const ratings = [...new Set(yelpData.map((d) => d.rating))];
+
+        ratingInput.on("focus input", function () {
+          const query = ratingInput.property("value").toLowerCase();
+          ratingList.html("");
+
+          const filteredRatings = query
+            ? ratings.filter((rating) => rating.toString().includes(query))
+            : ratings;
+
+          ratingList
+            .selectAll("li")
+            .data(filteredRatings)
+            .join("li")
+            .text((d) => d)
+            .on("click", function (event, rating) {
+              ratingInput.property("value", rating);
+              ratingList.html("").style("display", "none");
+
+              filters.rating = rating;
+              applyFilters();
+            });
+
+          ratingList.style(
+            "display",
+            filteredRatings.length > 0 ? "block" : "none"
+          );
+        });
+
+        // Neighborhood filtering
+        const neighborhoodInput = d3.select("#neighborhood-filtering");
+        const neighborhoodList = d3.select("#neighborhood-list");
+
+        const neighborhoods = [...new Set(yelpData.map((d) => d.neighborhood))];
+
+        neighborhoodInput.on("focus input", function () {
+          const query = neighborhoodInput.property("value").toLowerCase();
+          neighborhoodList.html("");
+
+          const filteredNeighborhoods = query
+            ? neighborhoods.filter((neighborhood) =>
+                neighborhood.toLowerCase().includes(query)
+              )
+            : neighborhoods;
+
+          neighborhoodList
+            .selectAll("li")
+            .data(filteredNeighborhoods)
+            .join("li")
+            .text((d) => d)
+            .on("click", function (event, neighborhood) {
+              neighborhoodInput.property("value", neighborhood);
+              neighborhoodList.html("").style("display", "none");
+
+              filters.neighborhood = neighborhood;
+              applyFilters();
+            });
+
+          neighborhoodList.style(
+            "display",
+            filteredNeighborhoods.length > 0 ? "block" : "none"
+          );
+        });
+
+        // Click outside the filtering box to close the dropdown
+        d3.select("body").on("click", function (event) {
+          const target = event.target;
+          if (
+            !d3.select("#category-filtering").node().contains(target) &&
+            !d3.select("#rating-filtering").node().contains(target) &&
+            !d3.select("#neighborhood-filtering").node().contains(target)
+          ) {
+            categoryList.style("display", "none");
+            ratingList.style("display", "none");
+            neighborhoodList.style("display", "none");
+          }
+        });
+        // Create clear buttons
+        d3.select("#category-clear-btn").on("click", function () {
+          d3.select("#category-filtering").property("value", "");
+          filters.category = null;
+          applyFilters();
+        });
+
+        d3.select("#rating-clear-btn").on("click", function () {
+          d3.select("#rating-filtering").property("value", "");
+          filters.rating = null;
+          applyFilters();
+        });
+
+        d3.select("#neighborhood-clear-btn").on("click", function () {
+          d3.select("#neighborhood-filtering").property("value", "");
+          filters.neighborhood = null;
+          applyFilters();
+        });
+
+        function updateMap(filteredData) {
+          svgMap.selectAll("circle").remove();
+
+          svgMap
+            .selectAll("circle")
+            .data(filteredData)
+            .enter()
+            .append("circle")
+            .attr("cx", (d) => projection([d.longitude, d.latitude])[0])
+            .attr("cy", (d) => projection([d.longitude, d.latitude])[1])
+            .attr("r", 5)
+            .attr("fill", "#FF1A1A")
+            .on("click", function (event, d) {
+              selectedRestaurant = d;
+              updateSidebar();
+            });
+        }
+
+        function updateSidebar() {
+          if (selectedRestaurant) {
+            d3.select("#default-message").style("display", "none");
+
+            d3.select("#restaurant-name")
+              .style("display", "block")
+              .text(selectedRestaurant.name);
+
+            d3.select("#restaurant-description")
+              .style("display", "block")
+              .select("span")
+              .text(selectedRestaurant.snippet_text);
+
+            d3.select("#restaurant-neighborhood")
+              .style("display", "block")
+              .select("span")
+              .text(selectedRestaurant.neighborhood);
+
+            d3.select("#restaurant-rating")
+              .style("display", "block")
+              .select("span")
+              .html(generateStars(selectedRestaurant.rating));
+
+            d3.select("#restaurant-link")
+              .attr("href", selectedRestaurant.url)
+              .style("display", "block");
+          } else {
+            d3.select("#default-message").style("display", "block");
+
+            d3.selectAll(
+              "#restaurant-name, #restaurant-description, #restaurant-neighborhood, #restaurant-rating, #restaurant-link"
+            ).style("display", "none");
+          }
+        }
+
+        updateMap(yelpData);
+
+        function generateStars(rating) {
+          return `<img src="review_stars/${rating}.png" alt="Rating: ${rating} stars" width="100" height="20">`;
+        }
+      };
+
+      yelpMapBoston();
+    </script>
+  </body>
 </html>
