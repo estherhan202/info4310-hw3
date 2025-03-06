@@ -7,9 +7,13 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
 
-    <!-- Google Maps JavaScript API Uncomment to use Street View -->
-    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsLKcHMuOZ620g6AlLPLhu_DgcgXsQXQg"></script> -->
+    <script src="config.js"></script>
 
+    <script>
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${config.GOOGLE_MAPS_API_KEY}`; // Replace with real key
+      document.head.appendChild(script);
+    </script>
     <!-- Link for Poppins font -->
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap"
